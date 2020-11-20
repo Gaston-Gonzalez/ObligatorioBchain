@@ -38,8 +38,9 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
         if (animals.length!=0){
-            if (caravana==animals[animalsCaravana[caravana]].caravana)
-            require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
+            if (int(caravana)==int (animals[animalsCaravana[caravana]].caravana)){
+                require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
+            }
         }
         Animal memory animal;
 
@@ -63,7 +64,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function updateAnimalWeight (uint caravana, uint newWeight) public payable{
-        require(animals[animalsCaravana[caravana]].exists && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: approve caller is not owner nor approved."
@@ -82,7 +83,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function slaughter(uint caravana) public payable{
-        require((animals[animalsCaravana[caravana]].exists) && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        require((animals[animalsCaravana[caravana]].exists) && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: method caller is not owner nor approved."
@@ -98,7 +99,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function transferFrom(address from, address to, uint caravana) public {
-        require(animals[animalsCaravana[caravana]].exists && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         uint256 tokenId= animalsCaravana[caravana];
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
 
@@ -118,7 +119,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
     function getAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint){
         uint tokenId= animalsCaravana[caravana];
-        if (animals[tokenId].caravana==caravana){
+        if (int(animals[tokenId].caravana)==int(caravana)){
             return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId);
         } else {
             require(false,  "That caravana does not exist");
@@ -127,7 +128,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function getTokenId (uint caravana) public view returns(uint){
-        require (animals[animalsCaravana[caravana]].caravana==caravana,  "That caravana does not exist");
+        require (int(animals[animalsCaravana[caravana]].caravana)==int(caravana),  "That caravana does not exist");
         return animalsCaravana[caravana];
     }
 
