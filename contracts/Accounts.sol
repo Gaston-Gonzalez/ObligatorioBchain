@@ -4,6 +4,7 @@ pragma solidity >=0.4.0 <0.8.0;
 contract Accounts{
 
     struct FarmAccount {
+        bool farm;
         bool exists;
         string description;
         bool admin;
@@ -24,14 +25,12 @@ contract Accounts{
     }
 
 
-  
-
-    function AccountType (address myAccount) public view returns 
-
+    function isFarm (address myAccount) public view returns(bool){
+        bool ok = false;
+        if (farms [msg.sender].exists){
+            ok = true;
+        } 
+        return ok;
         }
 
-        //
-
-       
     }
-}

@@ -39,7 +39,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
 
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
-        if (msg.sender)
+        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
         if (animals.length!=0){
             if (int(caravana)==int (animals[animalsCaravana[caravana]].caravana)){
                 require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
@@ -67,6 +67,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function updateAnimalWeight (uint caravana, uint newWeight) public payable{
+        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
         require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
@@ -86,6 +87,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function slaughter(uint caravana) public payable{
+        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
         require((animals[animalsCaravana[caravana]].exists) && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
@@ -103,6 +105,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function transferFrom(address from, address to, uint caravana) public {
+        require(accountsContract.isFarm(to), "only farms can execute this method"); 
         require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         uint256 tokenId= animalsCaravana[caravana];
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
@@ -185,7 +188,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         else return byte(uint8(b) + 0x57);
     }
 }
-    // Empieza el codigo de accounts
+
 
 
 
