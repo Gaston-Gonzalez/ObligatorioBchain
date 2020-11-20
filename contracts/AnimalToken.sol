@@ -5,6 +5,7 @@ pragma solidity >=0.4.0 <0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721Mintable.sol";
+import "./Accounts.sol";
 
 
 contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
@@ -39,7 +40,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
 
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
-        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
+        require(Accounts(accountsContract).isFarm(msg.sender), "only farms can execute this method");
         if (animals.length!=0){
             if (int(caravana)==int (animals[animalsCaravana[caravana]].caravana)){
                 require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
@@ -67,7 +68,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function updateAnimalWeight (uint caravana, uint newWeight) public payable{
-        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
+        require(Accounts(accountsContract).isFarm(msg.sender), "only farms can execute this method");
         require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
@@ -87,7 +88,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
 
     function slaughter(uint caravana) public payable{
-        require(accountsContract.isFarm(msg.sender), "only farms can execute this method"); 
+        require(Accounts(accountsContract).isFarm(msg.sender), "only farms can execute this method");
         require((animals[animalsCaravana[caravana]].exists) && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
@@ -104,8 +105,25 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         animals[animalsCaravana[caravana]].exists=false;
     }
 
+    function changeFarmLocation(address from, address to, uint caravana) public {
+        require(Accounts(accountsContract).isFarm(msg.sender),"Only Farms can move cattle");
+        uint tokenId= getTokenId(caravana);
+        if (Accounts(accountsContract).isFarm(from)){
+            _transferFrom(from, to, tokenId);
+        } else {
+            require(Accounts(accountsContract).isLocation(msg.sender,from), "That farm location is not registered to this farm or does not exist");
+            _transferFrom(from, to, tokenId);
+        }
+        string memory str1= uint2str(tokenId);
+        string memory str2= concat(str1, " has been moved within a farm from: ");
+        string memory str3= concat(str2, toAsciiString(from));
+        string memory str4= concat(str3, " to: ");
+        string memory text= concat(str4, toAsciiString(to));
+        animals[tokenId].events[animals[tokenId].eventCount]= myEvent(text, now);
+    }
+
     function transferFrom(address from, address to, uint caravana) public {
-        require(accountsContract.isFarm(to), "only farms can execute this method"); 
+        require(Accounts(accountsContract).isFarm(to), "only farms can execute this method");
         require(animals[animalsCaravana[caravana]].exists && int(caravana)==int(animals[animalsCaravana[caravana]].caravana), "That animal does not exist.");
         uint256 tokenId= animalsCaravana[caravana];
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
@@ -139,6 +157,30 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         return animalsCaravana[caravana];
     }
 
+    function getEverythingAnimalFromId(uint id) public view returns(uint, string memory, uint, uint, bool, bool, uint, myEvent[] memory){
+        Animal storage animal = animals[id];
+        myEvent[] memory events= new myEvent[](animal.eventCount);
+        for (uint i =0; i < animal.eventCount; i++){
+            events[i]=animal.events[i];
+        }
+        return(animal.caravana, animal.breed, animal.weight, animal.dateOfBirth, animal.male, animal.exists, animal.tokenID,events);
+    }
+    function getEverythingAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint, myEvent[] memory){
+        uint tokenId= animalsCaravana[caravana];
+        myEvent[] memory events;
+        if (int(animals[tokenId].caravana)==int(caravana)){
+            Animal storage animal = animals[tokenId];
+            events= new myEvent[](animal.eventCount);
+            for (uint i =0; i < animal.eventCount; i++){
+                events[i]=animal.events[i];
+            }
+            return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId, events);
+        } else {
+            require(false,  "That caravana does not exist");
+        }
+        return(0,"",0,0,true,true,0,events);
+    }
+
     function getEventsFromId(uint id) public view returns (myEvent[] memory){
         Animal storage animal = animals[id];
         myEvent[] memory events= new myEvent[](animal.eventCount);
@@ -148,6 +190,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         return events;
     }
 
+    //Funciones Auxiliares
     function uint2str(uint i) internal pure returns (string memory) {
         if (i == 0) return "0";
         uint j = i;
