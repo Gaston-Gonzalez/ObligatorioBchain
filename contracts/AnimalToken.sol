@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+pragma experimental ABIEncoderV2;
 pragma solidity >=0.4.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
@@ -32,9 +33,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
 
     //Cada animal nuevo se pushea al array, para así obtener un id único para cada animal con el length del array.
     Animal[] animals;
-    function aLen() public view returns(uint){
-        return animals.length;
-    }
+
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
         if (animals.length!=0){
@@ -71,9 +70,9 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         );
 
         string memory str1= uint2str(animalsCaravana[caravana]);
-        string memory str2= concat(str1,"weight changed from");
+        string memory str2= concat(str1,"'s weight changed from ");
         string memory str3= concat(str2,uint2str(animals[animalsCaravana[caravana]].weight));
-        string memory str4= concat(str3, "kg to");
+        string memory str4= concat(str3, "kg to ");
         string memory str5= concat(str4, uint2str(newWeight));
         string memory text= concat(str5, "kg.");
 
@@ -88,9 +87,10 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: method caller is not owner nor approved."
         );
-        string memory str1= uint2str(animalsCaravana[caravana]);
-        string memory str2= concat( "Animal", str1);
-        string memory text= concat(str2, "has been slaughtered or has died.");
+        string memory str1= uint2str((animalsCaravana[caravana]));
+        string memory str2= concat( "Animal ", str1);
+        string memory str3= concat(str2, " has been slaughtered or has died while being owned by: ");
+        string memory text= concat(str3, toAsciiString(ownerOf(animalsCaravana[caravana])));
 
 
         animals[animalsCaravana[caravana]].events[animals[animalsCaravana[caravana]].eventCount]= myEvent(text, now);
@@ -104,7 +104,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
 
         string memory str1= uint2str(tokenId);
-        string memory str2= concat(str1, "has been transferred from: ");
+        string memory str2= concat(str1, " has been transferred from: ");
         string memory str3= concat(str2, toAsciiString(from));
         string memory str4= concat(str3, " to: ");
         string memory text= concat(str4, toAsciiString(to));
@@ -114,7 +114,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         _transferFrom(from, to, tokenId);
     }
 
-    function getAnimalFromID(uint id) public view returns(uint, string memory, uint, uint, bool, bool, uint){
+    function getAnimalFromId(uint id) public view returns(uint, string memory, uint, uint, bool, bool, uint){
         return(animals[id].caravana, animals[id].breed, animals[id].weight, animals[id].dateOfBirth, animals[id].male, animals[id].exists, animals[id].tokenID);
     }
     function getAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint){
@@ -127,9 +127,18 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         return(0,"",0,0,true,true,0);
     }
 
-    function getTokenId (uint caravana) public view returns(uint){
+    function getTokenId(uint caravana) public view returns(uint){
         require (int(animals[animalsCaravana[caravana]].caravana)==int(caravana),  "That caravana does not exist");
         return animalsCaravana[caravana];
+    }
+
+    function getEventsFromId(uint id) public view returns (myEvent[] memory){
+        Animal storage animal = animals[id];
+        myEvent[] memory events= new myEvent[](animal.eventCount);
+        for (uint i =0; i < animal.eventCount; i++){
+            events[i]=animal.events[i];
+        }
+        return events;
     }
 
     function uint2str(uint i) internal pure returns (string memory) {
