@@ -8,21 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721Mintable.sol";
 
 contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     constructor() ERC721Full("Animal", "ANI") public{}
-//    // Equals to `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
-//    // which can be also obtained as `IERC721Receiver(0).onERC721Received.selector`
-//    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
-//
-//    // Mapping from token ID to owner
-//    mapping (uint256 => address) private _tokenOwner;
-//
-//    // Mapping from token ID to approved address
-//    mapping (uint256 => address) private _tokenApprovals;
-//
-//    // Mapping from owner to number of owned token
-//    mapping (address => Counters.Counter) private _ownedTokensCount;
-//
-//    // Mapping from owner to operator approvals
-//    mapping (address => mapping (address => bool)) private _operatorApprovals;
+
 
     struct myEvent{
         string description;
@@ -42,17 +28,20 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     }
     // Asociamos la caravana al animal que la tiene, como la caravana se reusa después de la faena,
     // el animal asociado se reescribirá.
-    mapping(uint => Animal) animalsCaravana;
+    mapping(uint => uint) animalsCaravana;
 
     //Cada animal nuevo se pushea al array, para así obtener un id único para cada animal con el length del array.
     Animal[] animals;
-
+    function aLen() public view returns(uint){
+        return animals.length;
+    }
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
-        require(!animalsCaravana[caravana].exists, "Another animal with that caravana still exists.");
+        if (animals.length!=0){
+            if (caravana==animals[animalsCaravana[caravana]].caravana)
+            require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
+        }
         Animal memory animal;
-        //Animal memory animal= Animal(caravana, breed, weight, dateOfBirth, male,true,new mapping (uint => myEvent) events, animals.length+1 );
-        //Token id = length de animals al momento de generar un nuevo animal.
 
 
         animal.caravana=caravana;
@@ -62,68 +51,85 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         animal.male=male;
         animal.exists= true;
         animal.eventCount=0;
-        uint _id = animals.push(animal);
-        animal.tokenID= _id;
-        animalsCaravana[caravana]= animal;
+        animal.tokenID= animals.length;
+
+        //Token id = length de animals al momento de generar un nuevo animal.
+        animals.push(animal);
+        uint _id = animals.length-1;
+        animals[_id].tokenID= _id;
+        animalsCaravana[caravana]= _id;
 
         _mint (msg.sender, _id);
     }
 
     function updateAnimalWeight (uint caravana, uint newWeight) public payable{
-        require(animalsCaravana[caravana].exists, "That animal does not exist.");
-        address owner = ownerOf(animalsCaravana[caravana].tokenID);
+        require(animals[animalsCaravana[caravana]].exists && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: approve caller is not owner nor approved."
         );
 
-        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
+        string memory str1= uint2str(animalsCaravana[caravana]);
         string memory str2= concat(str1,"weight changed from");
-        string memory str3= concat(str2,uint2str(animalsCaravana[caravana].weight));
+        string memory str3= concat(str2,uint2str(animals[animalsCaravana[caravana]].weight));
         string memory str4= concat(str3, "kg to");
         string memory str5= concat(str4, uint2str(newWeight));
         string memory text= concat(str5, "kg.");
 
-        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
-        animalsCaravana[caravana].eventCount+=1;
-        animalsCaravana[caravana].weight=newWeight;
+        animals[animalsCaravana[caravana]].events[animals[animalsCaravana[caravana]].eventCount]= myEvent(text, now);
+        animals[animalsCaravana[caravana]].eventCount+=1;
+        animals[animalsCaravana[caravana]].weight=newWeight;
     }
 
     function slaughter(uint caravana) public payable{
-        require(animalsCaravana[caravana].exists, "That animal does not exist.");
-        address owner = ownerOf(animalsCaravana[caravana].tokenID);
+        require((animals[animalsCaravana[caravana]].exists) && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        address owner = ownerOf(animalsCaravana[caravana]);
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            "ERC721: approve caller is not owner nor approved."
+            "ERC721: method caller is not owner nor approved."
         );
-        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
+        string memory str1= uint2str(animalsCaravana[caravana]);
         string memory str2= concat( "Animal", str1);
         string memory text= concat(str2, "has been slaughtered or has died.");
-        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
-        animalsCaravana[caravana].eventCount+=1;
-        animalsCaravana[caravana].exists=false;
+
+
+        animals[animalsCaravana[caravana]].events[animals[animalsCaravana[caravana]].eventCount]= myEvent(text, now);
+        animals[animalsCaravana[caravana]].eventCount+=1;
+        animals[animalsCaravana[caravana]].exists=false;
     }
 
     function transferFrom(address from, address to, uint caravana) public {
-        require(animalsCaravana[caravana].exists, "That animal does not exist.");
-        uint256 tokenId= animalsCaravana[caravana].tokenID;
+        require(animals[animalsCaravana[caravana]].exists && caravana==animals[animalsCaravana[caravana]].caravana, "That animal does not exist.");
+        uint256 tokenId= animalsCaravana[caravana];
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
 
-        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
+        string memory str1= uint2str(tokenId);
         string memory str2= concat(str1, "has been transferred from: ");
         string memory str3= concat(str2, toAsciiString(from));
-        string memory str4= concat(str3, " to");
+        string memory str4= concat(str3, " to: ");
         string memory text= concat(str4, toAsciiString(to));
-        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
-        animalsCaravana[caravana].eventCount+=1;
+        animals[tokenId].events[animals[tokenId].eventCount]= myEvent(text, now);
+        animals[tokenId].eventCount+=1;
 
         _transferFrom(from, to, tokenId);
     }
 
-//    function ownerOf(uint256 tokenId) public view returns (address) {
-//        address owner = _tokenOwner[tokenId];
-//        require(owner != address(0), "ERC721: owner query for nonexistent token");
-//
-//        return owner;
-//    }
+    function getAnimalFromID(uint id) public view returns(uint, string memory, uint, uint, bool, bool, uint){
+        return(animals[id].caravana, animals[id].breed, animals[id].weight, animals[id].dateOfBirth, animals[id].male, animals[id].exists, animals[id].tokenID);
+    }
+    function getAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint){
+        uint tokenId= animalsCaravana[caravana];
+        if (animals[tokenId].caravana==caravana){
+            return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId);
+        } else {
+            require(false,  "That caravana does not exist");
+        }
+        return(0,"",0,0,true,true,0);
+    }
+
+    function getTokenId (uint caravana) public view returns(uint){
+        require (animals[animalsCaravana[caravana]].caravana==caravana,  "That caravana does not exist");
+        return animalsCaravana[caravana];
+    }
 
     function uint2str(uint i) internal pure returns (string memory) {
         if (i == 0) return "0";
