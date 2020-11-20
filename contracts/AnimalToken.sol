@@ -6,8 +6,24 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721Mintable.sol";
 
 
-contract animalToken is ERC721, ERC721Full, ERC721Mintable {
+contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
     constructor() ERC721Full("Animal", "ANI") public{}
+//    // Equals to `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+//    // which can be also obtained as `IERC721Receiver(0).onERC721Received.selector`
+//    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
+//
+//    // Mapping from token ID to owner
+//    mapping (uint256 => address) private _tokenOwner;
+//
+//    // Mapping from token ID to approved address
+//    mapping (uint256 => address) private _tokenApprovals;
+//
+//    // Mapping from owner to number of owned token
+//    mapping (address => Counters.Counter) private _ownedTokensCount;
+//
+//    // Mapping from owner to operator approvals
+//    mapping (address => mapping (address => bool)) private _operatorApprovals;
+
     struct myEvent{
         string description;
         uint timestamp;
@@ -20,7 +36,8 @@ contract animalToken is ERC721, ERC721Full, ERC721Mintable {
         uint dateOfBirth;
         bool male;
         bool exists;
-        myEvent[] events;
+        mapping (uint => myEvent) events;
+        uint eventCount;
         uint tokenID;
     }
     // Asociamos la caravana al animal que la tiene, como la caravana se reusa después de la faena,
@@ -31,23 +48,24 @@ contract animalToken is ERC721, ERC721Full, ERC721Mintable {
     Animal[] animals;
 
 
-   /* struct crop{
-        uint256 id;
-        string name;
-
-    }*/
-
-  //  mapping(uint256 => crop) crops;
-
-    function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) internal{
+    function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
         require(!animalsCaravana[caravana].exists, "Another animal with that caravana still exists.");
-
-        myEvent[] memory events;
-        Animal memory _animal = Animal(caravana, breed, weight, dateOfBirth, male, true, events, animals.length+1);
-        animalsCaravana[caravana]= _animal;
-
+        Animal memory animal;
+        //Animal memory animal= Animal(caravana, breed, weight, dateOfBirth, male,true,new mapping (uint => myEvent) events, animals.length+1 );
         //Token id = length de animals al momento de generar un nuevo animal.
-        uint _id= animals.push(_animal);
+
+
+        animal.caravana=caravana;
+        animal.breed=breed;
+        animal.weight=weight;
+        animal.dateOfBirth=dateOfBirth;
+        animal.male=male;
+        animal.exists= true;
+        animal.eventCount=0;
+        uint _id = animals.push(animal);
+        animal.tokenID= _id;
+        animalsCaravana[caravana]= animal;
+
         _mint (msg.sender, _id);
     }
 
@@ -58,14 +76,15 @@ contract animalToken is ERC721, ERC721Full, ERC721Mintable {
             "ERC721: approve caller is not owner nor approved."
         );
 
-        string memory str1= uint2str(caravana);
+        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
         string memory str2= concat(str1,"weight changed from");
         string memory str3= concat(str2,uint2str(animalsCaravana[caravana].weight));
         string memory str4= concat(str3, "kg to");
         string memory str5= concat(str4, uint2str(newWeight));
         string memory text= concat(str5, "kg.");
 
-        animalsCaravana[caravana].events.push(myEvent(text, now));
+        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
+        animalsCaravana[caravana].eventCount+=1;
         animalsCaravana[caravana].weight=newWeight;
     }
 
@@ -75,13 +94,36 @@ contract animalToken is ERC721, ERC721Full, ERC721Mintable {
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: approve caller is not owner nor approved."
         );
-        string memory str1= uint2str(caravana);
+        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
         string memory str2= concat( "Animal", str1);
         string memory text= concat(str2, "has been slaughtered or has died.");
-        animalsCaravana[caravana].events.push(myEvent(text, now));
+        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
+        animalsCaravana[caravana].eventCount+=1;
         animalsCaravana[caravana].exists=false;
     }
 
+    function transferFrom(address from, address to, uint caravana) public {
+        require(animalsCaravana[caravana].exists, "That animal does not exist.");
+        uint256 tokenId= animalsCaravana[caravana].tokenID;
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
+
+        string memory str1= uint2str(animalsCaravana[caravana].tokenID);
+        string memory str2= concat(str1, "has been transferred from: ");
+        string memory str3= concat(str2, toAsciiString(from));
+        string memory str4= concat(str3, " to");
+        string memory text= concat(str4, toAsciiString(to));
+        animalsCaravana[caravana].events[animalsCaravana[caravana].eventCount]= myEvent(text, now);
+        animalsCaravana[caravana].eventCount+=1;
+
+        _transferFrom(from, to, tokenId);
+    }
+
+//    function ownerOf(uint256 tokenId) public view returns (address) {
+//        address owner = _tokenOwner[tokenId];
+//        require(owner != address(0), "ERC721: owner query for nonexistent token");
+//
+//        return owner;
+//    }
 
     function uint2str(uint i) internal pure returns (string memory) {
         if (i == 0) return "0";
@@ -104,6 +146,23 @@ contract animalToken is ERC721, ERC721Full, ERC721Mintable {
 
         return string(abi.encodePacked(a, b));
 
+    }
+
+    function toAsciiString(address x) internal pure returns (string memory) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+            byte hi = byte(uint8(b) / 16);
+            byte lo = byte(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);
+        }
+        return string(s);
+    }
+
+    function char(byte b) internal pure returns (byte c) {
+        if (uint8(b) < 10) return byte(uint8(b) + 0x30);
+        else return byte(uint8(b) + 0x57);
     }
 }
 

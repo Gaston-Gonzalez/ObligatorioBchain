@@ -1,5 +1,5 @@
-const Tracing = artifacts.require("Tracing");
+const AnimalToken = artifacts.require("AnimalToken");
 
 module.exports = function(deployer){
-    deployer.deploy(Tracing);
+    deployer.deploy(AnimalToken);
 }
