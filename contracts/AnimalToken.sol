@@ -8,8 +8,11 @@ import "@openzeppelin/contracts/token/ERC721/ERC721Mintable.sol";
 
 
 contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
-    constructor() ERC721Full("Animal", "ANI") public{}
+    constructor(address _accountsContract) ERC721Full("Animal", "ANI") public{
+        accountsContract = _accountsContract;
+    }
 
+    address accountsContract;
 
     struct myEvent{
         string description;
@@ -36,6 +39,7 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
 
 
     function mint(uint caravana, string memory breed, uint weight, uint dateOfBirth, bool male) public {
+        if (msg.sender)
         if (animals.length!=0){
             if (int(caravana)==int (animals[animalsCaravana[caravana]].caravana)){
                 require(!animals[getTokenId(caravana)].exists, "Another animal with that caravana still exists.");
@@ -181,6 +185,8 @@ contract AnimalToken is ERC721, ERC721Full, ERC721Mintable {
         else return byte(uint8(b) + 0x57);
     }
 }
+    // Empieza el codigo de accounts
+
 
 
 
