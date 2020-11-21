@@ -13,8 +13,12 @@ contract Accounts{
         
     }
     mapping(address => FarmAccount) public farms;
+
     function isLocation(address sender, address from) public returns(bool){
         return farms[sender].farmLocations[from].exists;
+    }
+    function isAdmin(address sender) public returns(bool){
+        return farms[sender].admin;
     }
 
     constructor () public {
@@ -43,6 +47,7 @@ contract Accounts{
         farm.farmLocations[_address].description=description;
         farm.farmLocations[_address].farm=farmAddress;
         farm.farmlength+=1;
+
     }
 
 
