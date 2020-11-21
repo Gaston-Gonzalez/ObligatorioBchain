@@ -149,12 +149,8 @@ contract AnimalToken is ERC721, ERC721Full {
     }
     function getAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint){
         uint tokenId= animalsCaravana[caravana];
-        if (int(animals[tokenId].caravana)==int(caravana)){
-            return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId);
-        } else {
-            require(false,  "That caravana does not exist");
-        }
-        return(0,"",0,0,true,true,0);
+        require(int(animals[tokenId].caravana)==int(caravana),  "That caravana does not exist");
+        return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId);
     }
 
     function getTokenId(uint caravana) public view returns(uint){
@@ -173,17 +169,14 @@ contract AnimalToken is ERC721, ERC721Full {
     function getEverythingAnimalFromCaravana(uint caravana) public view returns(uint, string memory, uint, uint, bool, bool, uint, myEvent[] memory){
         uint tokenId= animalsCaravana[caravana];
         myEvent[] memory events;
-        if (int(animals[tokenId].caravana)==int(caravana)){
-            Animal storage animal = animals[tokenId];
-            events= new myEvent[](animal.eventCount);
-            for (uint i =0; i < animal.eventCount; i++){
-                events[i]=animal.events[i];
-            }
-            return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId, events);
-        } else {
-            require(false,  "That caravana does not exist");
+        require (int(animals[animalsCaravana[caravana]].caravana)==int(caravana),  "That caravana does not exist");
+        Animal storage animal = animals[tokenId];
+        events= new myEvent[](animal.eventCount);
+        for (uint i =0; i < animal.eventCount; i++){
+            events[i]=animal.events[i];
         }
-        return(0,"",0,0,true,true,0,events);
+        return(animals[tokenId].caravana, animals[tokenId].breed, animals[tokenId].weight, animals[tokenId].dateOfBirth, animals[tokenId].male, animals[tokenId].exists, tokenId, events);
+
     }
 
     function getEventsFromId(uint id) public view returns (myEvent[] memory){
